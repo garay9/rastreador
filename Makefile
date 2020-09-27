@@ -1,4 +1,0 @@
-
-CFLAGS=-Wall
-
-all: rastreador

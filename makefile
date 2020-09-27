@@ -9,7 +9,7 @@ DEBUG=-g
 OPT=-O0
 # warnings
 WARN=-Wall
-
+# multithreading
 PTHREAD=-pthread
 
 CCFLAGS=$(DEBUG) $(OPT) $(WARN) $(PTHREAD) -pipe
