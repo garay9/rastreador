@@ -53,7 +53,7 @@ GtkCellRenderer *frecuenciaText;
 GtkWidget *window;
 GtkBuilder *builder;
 
-char ***data;
+extern char ***tablaAcumulada;
 
 int maxSizeBitacora = 1024;
 int maxSizeFrecuencia = 1024;
@@ -64,40 +64,17 @@ int currentSizeFrecuencia = 0;
 int widthChart = 600;
 int heightChart = 600;
 extern int rows;
-extern int cols;
+extern int tableSize;
 int currentRow = 1;
 
 int pausadaStarted;
-//Calcula las frecuencias de cada syscall
-
-char ***calcularAcumulados()
-{
-    char ***matrix = (char ***)malloc(rows * sizeof(char **));
-    for (int i = 0; i < rows; i++)
-    {
-        matrix[i] = (char **)malloc(2 * sizeof(char *));
-        for (int j = 0; j < 2; j++)
-        {
-            matrix[i][j] = malloc(255 * sizeof(char));
-            if (j % 2 == 0)
-            {
-                strcpy(matrix[i][j], "Hello world");
-            }
-            else
-            {
-                sprintf(matrix[i][j], "%d", i);
-            }
-        }
-    }
-    return matrix;
-}
 
 //Muestra la tabla de acumulados
 void desplegarTablaAcumulada()
 {
-    data = calcularAcumulados();
+    gtk_list_store_clear (acumuladaStore);
     GtkTreeIter iter;
-    for (int i = 0; i < rows; i++)
+    for (int i = 0; i < tableSize; i++)
     {
         gtk_list_store_append(acumuladaStore, &iter);
         for (int j = 0; j < 2; j++)
@@ -105,13 +82,13 @@ void desplegarTablaAcumulada()
             //si es data[i][1], se obtiene la frecuencia
             if (j == 1)
             {
-                const gint str = atoi(data[i][j]);
+                const gint str = atoi(tablaAcumulada[i][j]);
 
                 gtk_list_store_set(acumuladaStore, &iter, j, str, -1);
             }
             else
             {
-                const gchararray str = data[i][j];
+                const gchararray str = tablaAcumulada[i][j];
                 gtk_list_store_set(acumuladaStore, &iter, j, str, -1);
             }
         }
@@ -124,6 +101,7 @@ void desplegarBitacoraPausada(char **array)
     while (!cargarLinea)
         ;
     cargarLinea = 0;
+    desplegarTablaAcumulada();
     GtkTreeIter iter;
 
     gtk_list_store_append(bitacoraStore, &iter);
@@ -240,7 +218,7 @@ void reset_button_clicked_cb(GtkButton *b)
 {
     gtk_list_store_clear(bitacoraStore);
     gtk_list_store_clear(acumuladaStore);
-    data = NULL;
+    //data = NULL;
 }
 
 /******************************************************************
@@ -268,7 +246,7 @@ static void do_drawing(cairo_t *cr, GtkWidget *widget)
 
     for (int i = 0; i < rows; i++)
     {
-        float p = atoi(data[i][1]);
+        float p = atoi(tablaAcumulada[i][1]);
         p /= 4950;
 
         toAngle += 2 * M_PI * p;
