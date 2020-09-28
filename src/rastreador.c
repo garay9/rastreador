@@ -17,9 +17,25 @@ char *getDescription(int syscall);
 int continuar;
 int ejecucionContinua;
 int argNumber;
-char** args;
-void* prueba(void *vargp)
+char **args;
+char **bitacora;
+char ***tablaAcumulada;
+int contadorTabla = 0;
+int rows = 100;
+int cols = 4;
+int tableSize = 0;
+int cargarLinea = 0;
+int terminado = 0;
+
+
+void *prueba(void *vargp)
 {
+    bitacora = (char **)malloc(4 * sizeof(char *));
+    for (int j = 0; j < 4; j++)
+    {
+        bitacora[j] = malloc(255 * sizeof(char));
+    }
+    syscalls = createTableInt(350);
     continuar = 0;
     pid_t hijo = fork();
     if (hijo == 0)
@@ -30,6 +46,7 @@ void* prueba(void *vargp)
     {
         return tracear(hijo);
     }
+    
     pthread_exit(NULL);
 }
 
@@ -67,12 +84,24 @@ int tracear(pid_t hijo)
     int estado, syscall;
     waitpid(hijo, &estado, 0);
     ptrace(PTRACE_SETOPTIONS, hijo, 0, PTRACE_O_TRACESYSGOOD);
-    fprintf(stderr, "%d\n%d\n", ejecucionContinua, continuar);
+    //fprintf(stderr, "%d\n%d\n", ejecucionContinua, continuar);
     while (esperarSyscall(hijo) == 0)
     {
         syscall = ptrace(PTRACE_PEEKUSER, hijo, sizeof(long) * ORIG_RAX);
-        fprintf(stderr, "%s\n descripción %s\n", getname(syscall), getDescription(syscall));
+        //fprintf(stderr, "%s\n descripción %s\n", getname(syscall), getDescription(syscall));
+        char id[255] = "";
+        char codigo[255] = "";
+        sprintf(id, "%i", contadorTabla);
+        sprintf(codigo, "%i", syscall);
+        strcpy(bitacora[0], id);
+        strcpy(bitacora[1], codigo);
+        strcpy(bitacora[2], getname(syscall));
+        strcpy(bitacora[3], getDescription(syscall));
+        cargarLinea = 1;
+        contadorTabla++;
+        esperarSyscall(hijo);
         continuar = 0;
     }
+    terminado = 1;
     return 0;
 }

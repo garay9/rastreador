@@ -10,10 +10,11 @@
 
 extern int continuar;
 extern int ejecucionContinua;
-extern void* prueba();
+extern void *prueba();
 extern int argNumber;
-extern char** args;
-
+extern char **args;
+extern char **bitacora;
+extern int terminado;
 GtkWidget *bitacoraScrolled;
 
 GtkWidget *pausada_radio;
@@ -62,8 +63,8 @@ int currentSizeFrecuencia = 0;
 
 int widthChart = 600;
 int heightChart = 600;
-int rows = 100;
-int cols = 4;
+extern int rows;
+extern int cols;
 int currentRow = 1;
 
 int pausadaStarted;
@@ -120,6 +121,9 @@ void desplegarTablaAcumulada()
 
 void desplegarBitacoraPausada(char **array)
 {
+    while (!cargarLinea)
+        ;
+    cargarLinea = 0;
     GtkTreeIter iter;
 
     gtk_list_store_append(bitacoraStore, &iter);
@@ -128,8 +132,8 @@ void desplegarBitacoraPausada(char **array)
     {
         const gchararray str = array[i];
         gtk_list_store_set(bitacoraStore, &iter, i, str, -1);
-        free(str);
     }
+    cargarLinea = 0;
 }
 
 void desplegarBitacoraContinua(char ***matrix)
@@ -168,49 +172,33 @@ void chart_button_clicked_cb(GtkButton *b)
 
 void continua_radio_toggled_cb(GtkToggleButton *continua_radio)
 {
-    gboolean isActive = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(continua_radio));
-    if (!isActive)
-    {
-        //gtk_widget_set_sensitive(rastrear_button, FALSE);
-        gtk_widget_set_sensitive(next_button, TRUE);
-        ejecucionContinua = 1;
-    }
-    else
-    {
-        //gtk_widget_set_sensitive(rastrear_button, TRUE);
-        gtk_widget_set_sensitive(next_button, FALSE);
-        ejecucionContinua = 0;
-    }
+
+    ejecucionContinua = 1;
+    continuar = 1;
 }
 
 void pausada_radio_toggled_cb(GtkToggleButton *pausada_radio)
 {
     ejecucionContinua = 0;
+    continuar = 1;
 }
 
 void next_button_clicked_cb(GtkButton *b)
 {
-    char **array = (char **)malloc(4 * 255);
-    for (int i = 0; i < 4; i++)
-    {
-        array[i] = (char *)malloc(255);
-        strcpy(array[i], "Holi");
-    }
     continuar = 1;
-    desplegarBitacoraPausada(array);
+    desplegarBitacoraPausada(bitacora);
 }
 
 void rastrear_button_clicked_cb(GtkButton *rastrear_button)
 {
-    char ***matrix = (char ***)malloc(rows * sizeof(char **));
-    for (int i = 0; i < rows; i++)
+
+    if (!ejecucionContinua)
     {
-        matrix[i] = (char **)malloc(cols * sizeof(char *));
-        for (int j = 0; j < cols; j++)
-        {
-            matrix[i][j] = malloc(255 * sizeof(char));
-            strcpy(matrix[i][j], "Hello world");
-        }
+        gtk_widget_set_sensitive(next_button, TRUE);
+    }
+    else
+    {
+        gtk_widget_set_sensitive(next_button, FALSE);
     }
 
     char *comando = gtk_entry_get_text(consolaField);
@@ -221,9 +209,10 @@ void rastrear_button_clicked_cb(GtkButton *rastrear_button)
     {
         argumentos[j] = malloc(255 * sizeof(char));
         char *token;
-        
+
         token = strtok_r(comando, " ", &comando);
-        if(token == NULL) break;
+        if (token == NULL)
+            break;
         strcpy(argumentos[j], token);
         argc++;
     }
@@ -231,7 +220,19 @@ void rastrear_button_clicked_cb(GtkButton *rastrear_button)
     argNumber = argc;
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, prueba, NULL);
-    desplegarBitacoraContinua(matrix);
+    if (ejecucionContinua)
+    {
+        while (!terminado)
+        {
+            if (cargarLinea)
+            {
+                continuar = 0;
+                desplegarBitacoraPausada(bitacora);
+                continuar = 1;
+            }
+            if(terminado) break;
+        }
+    }
     desplegarTablaAcumulada();
 }
 
