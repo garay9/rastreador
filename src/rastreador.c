@@ -20,6 +20,8 @@ int argNumber;
 char **args;
 char **bitacora;
 char ***tablaAcumulada;
+char ***tablaBitacora;
+int sizeBitacora = 0;
 int contadorTabla = 0;
 int rows = 355;
 int cols = 4;
@@ -41,6 +43,15 @@ void *prueba(void *vargp)
         for (int j = 0; j < 2; j++)
         {
             tablaAcumulada[i][j] = malloc(255 * sizeof(char));
+        }
+    }
+    tablaBitacora = (char ***)malloc(rows * 10 * sizeof(char **));
+    for (int i = 0; i < rows; i++)
+    {
+        tablaBitacora[i] = (char **)malloc(2 * sizeof(char *));
+        for (int j = 0; j < cols; j++)
+        {
+            tablaBitacora[i][j] = malloc(255 * sizeof(char));
         }
     }
     continuar = 0;
@@ -106,7 +117,7 @@ int tracear(pid_t hijo)
         strcpy(bitacora[3], getDescription(syscall));
         for (int i = 0; i <= tableSize; i++)
         {
-            if (i == tableSize)
+            if (i >= tableSize)
             {
                 strcpy(tablaAcumulada[i][0], bitacora[2]);
                 strcpy(tablaAcumulada[i][1], "1");
@@ -121,14 +132,25 @@ int tracear(pid_t hijo)
                 sprintf(tablaAcumulada[i][1], "%i", numero);
                 break;
             }
-            
         }
-
+        if (ejecucionContinua)
+        {
+            strcpy(tablaBitacora[sizeBitacora][0], id);
+            strcpy(tablaBitacora[sizeBitacora][1], codigo);
+            strcpy(tablaBitacora[sizeBitacora][2], getname(syscall));
+            strcpy(tablaBitacora[sizeBitacora][3], getDescription(syscall));
+            sizeBitacora++;
+        }
         cargarLinea = 1;
         contadorTabla++;
         esperarSyscall(hijo);
         continuar = 0;
     }
     terminado = 1;
+    for (int j = 0; j < argNumber; j++)
+    {
+        free(args[j]);
+    }
+    free(args);
     return 0;
 }

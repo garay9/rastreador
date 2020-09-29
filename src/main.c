@@ -15,6 +15,9 @@ extern int argNumber;
 extern char **args;
 extern char **bitacora;
 extern int terminado;
+extern char ***tablaBitacora;
+extern int sizeBitacora;
+
 GtkWidget *bitacoraScrolled;
 
 GtkWidget *pausada_radio;
@@ -72,7 +75,7 @@ int pausadaStarted;
 //Muestra la tabla de acumulados
 void desplegarTablaAcumulada()
 {
-    gtk_list_store_clear (acumuladaStore);
+    gtk_list_store_clear(acumuladaStore);
     GtkTreeIter iter;
     for (int i = 0; i < tableSize; i++)
     {
@@ -98,26 +101,36 @@ void desplegarTablaAcumulada()
 
 void desplegarBitacoraPausada(char **array)
 {
-    while (!cargarLinea)
-        ;
-    cargarLinea = 0;
-    desplegarTablaAcumulada();
-    GtkTreeIter iter;
-
-    gtk_list_store_append(bitacoraStore, &iter);
-
-    for (int i = 0; i < cols; i++)
+    if (!terminado)
     {
-        const gchararray str = array[i];
-        gtk_list_store_set(bitacoraStore, &iter, i, str, -1);
+        while (!cargarLinea)
+            if (terminado)
+                return;
+        ;
+        cargarLinea = 0;
+        desplegarTablaAcumulada();
+        GtkTreeIter iter;
+
+        gtk_list_store_append(bitacoraStore, &iter);
+
+        for (int i = 0; i < cols; i++)
+        {
+            const gchararray str = array[i];
+            gtk_list_store_set(bitacoraStore, &iter, i, str, -1);
+        }
+        cargarLinea = 0;
     }
-    cargarLinea = 0;
+    else
+    {
+        gtk_widget_set_sensitive(next_button, FALSE);
+    }
 }
 
 void desplegarBitacoraContinua(char ***matrix)
 {
+    gtk_list_store_clear(bitacoraStore);
     GtkTreeIter iter;
-    for (int i = 0; i < rows; i++)
+    for (int i = 0; i < sizeBitacora; i++)
     {
 
         gtk_list_store_append(bitacoraStore, &iter);
@@ -126,7 +139,6 @@ void desplegarBitacoraContinua(char ***matrix)
         {
             const gchararray str = matrix[i][j];
             gtk_list_store_set(bitacoraStore, &iter, j, str, -1);
-            free(str);
         }
     }
 }
@@ -163,6 +175,7 @@ void pausada_radio_toggled_cb(GtkToggleButton *pausada_radio)
 
 void next_button_clicked_cb(GtkButton *b)
 {
+
     continuar = 1;
     desplegarBitacoraPausada(bitacora);
 }
@@ -173,6 +186,7 @@ void rastrear_button_clicked_cb(GtkButton *rastrear_button)
     if (!ejecucionContinua)
     {
         gtk_widget_set_sensitive(next_button, TRUE);
+        continuar = 1;
     }
     else
     {
@@ -202,23 +216,48 @@ void rastrear_button_clicked_cb(GtkButton *rastrear_button)
     {
         while (!terminado)
         {
+            continuar = 0;
             if (cargarLinea)
             {
-                continuar = 0;
-                desplegarBitacoraPausada(bitacora);
+                desplegarBitacoraContinua(tablaBitacora);
                 continuar = 1;
             }
-            if(terminado) break;
+            if (terminado)
+            {
+                break;
+            }
         }
+        desplegarTablaAcumulada();
     }
-    desplegarTablaAcumulada();
 }
 
 void reset_button_clicked_cb(GtkButton *b)
 {
     gtk_list_store_clear(bitacoraStore);
     gtk_list_store_clear(acumuladaStore);
-    //data = NULL;
+    gtk_widget_set_sensitive(next_button, FALSE);
+    continuar = 0;
+    contadorTabla = 0;
+    sizeBitacora = 0;
+    tableSize = 0;
+    cargarLinea = 0;
+    terminado = 0;
+    for (int j = 0; j < 4; j++)
+    {
+        free(bitacora[j]);
+    }
+    free(bitacora);
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < 2; j++)
+        {
+            free(tablaAcumulada[i][j]);
+        }
+        free(tablaAcumulada[i]);
+    }
+    free(tablaAcumulada);
+    
+    
 }
 
 /******************************************************************
