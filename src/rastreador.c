@@ -23,7 +23,7 @@ char ***tablaAcumulada;
 char ***tablaBitacora;
 int sizeBitacora = 0;
 int contadorTabla = 0;
-int rows = 355;
+int rows = 102400;
 int cols = 4;
 int tableSize = 0;
 int cargarLinea = 0;
@@ -40,19 +40,17 @@ void *prueba(void *vargp)
     for (int i = 0; i < rows; i++)
     {
         tablaAcumulada[i] = (char **)malloc(2 * sizeof(char *));
-        for (int j = 0; j < 2; j++)
-        {
-            tablaAcumulada[i][j] = malloc(255 * sizeof(char));
-        }
+        tablaAcumulada[i][0] = malloc(10 * sizeof(char));
+        tablaAcumulada[i][1] = malloc(7 * sizeof(char));
     }
     tablaBitacora = (char ***)malloc(rows * 10 * sizeof(char **));
     for (int i = 0; i < rows * 10; i++)
     {
         tablaBitacora[i] = (char **)malloc(cols * sizeof(char *));
-        for (int j = 0; j < cols; j++)
-        {
-            tablaBitacora[i][j] = malloc(255 * sizeof(char));
-        }
+        tablaBitacora[i][0] = malloc(7 * sizeof(char));
+        tablaBitacora[i][1] = malloc(4 * sizeof(char));
+        tablaBitacora[i][2] = malloc(10 * sizeof(char));
+        tablaBitacora[i][3] = malloc(180 * sizeof(char));
     }
     continuar = 0;
     pid_t hijo = fork();
@@ -77,6 +75,7 @@ int procesoHijo(int argc, char **argv)
     //indicar trace
     ptrace(PTRACE_TRACEME);
     kill(getpid(), SIGSTOP);
+    fprintf(stderr, "Hijo hecho");
     return execvp(args[0], args);
 }
 
