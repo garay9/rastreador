@@ -256,6 +256,15 @@ void reset_button_clicked_cb(GtkButton *b)
         free(tablaAcumulada[i]);
     }
     free(tablaAcumulada);
+    for (int i = 0; i < rows * 10; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            free(tablaBitacora[i][j]);
+        }
+        free(tablaBitacora[i]);
+    }
+    free(tablaBitacora);
     
     
 }

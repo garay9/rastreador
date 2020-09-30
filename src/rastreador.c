@@ -46,9 +46,9 @@ void *prueba(void *vargp)
         }
     }
     tablaBitacora = (char ***)malloc(rows * 10 * sizeof(char **));
-    for (int i = 0; i < rows; i++)
+    for (int i = 0; i < rows * 10; i++)
     {
-        tablaBitacora[i] = (char **)malloc(2 * sizeof(char *));
+        tablaBitacora[i] = (char **)malloc(cols * sizeof(char *));
         for (int j = 0; j < cols; j++)
         {
             tablaBitacora[i][j] = malloc(255 * sizeof(char));
