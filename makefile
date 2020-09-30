@@ -12,9 +12,9 @@ WARN=-Wall
 # multithreading
 PTHREAD=-pthread
 
-CCFLAGS=$(DEBUG) $(OPT) $(WARN) $(PTHREAD) -pipe
+CCFLAGS=$(DEBUG) $(OPT) $(WARN) $(PTHREAD) -pipe 
 
-GTKLIB=`pkg-config --cflags --libs gtk+-3.0`
+GTKLIB=`pkg-config --cflags --libs gtk+-3.0` -lm -w
 
 # linker
 LD=gcc
@@ -26,7 +26,7 @@ all: $(OBJS)
 	$(LD) -o $(TARGET) $(OBJS) $(LDFLAGS)
     
 main.o: src/main.c
-	$(CC) -c $(CCFLAGS) src/main.c $(GTKLIB) -o main.o
+	$(CC) -c $(CCFLAGS) src/main.c $(GTKLIB) -o main.o -lm
     
 clean:
 	rm -f *.o $(TARGET)
