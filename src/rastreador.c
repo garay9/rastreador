@@ -10,24 +10,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include "names.c"
 
-char *getname(int syscall);
-char *getDescription(int syscall);
-int continuar;
-int ejecucionContinua;
-int argNumber;
-char **args;
-char **bitacora;
-char ***tablaAcumulada;
-char ***tablaBitacora;
-int sizeBitacora = 0;
-int contadorTabla = 0;
-int rows = 102400;
-int cols = 4;
-int tableSize = 0;
-int cargarLinea = 0;
-int terminado = 0;
 
 void *prueba(void *vargp)
 {

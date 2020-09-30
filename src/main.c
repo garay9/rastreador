@@ -2,22 +2,41 @@
 #include <gdk/gdk.h>
 #include <cairo.h>
 #include <math.h>
+#include <sys/ptrace.h>
+
+#include <sys/syscall.h>
+#include <sys/reg.h>
+#include <sys/reg.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/signal.h>
+#include <unistd.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include "rastreador.c"
+#include "names.c"
 
 static void do_drawing(cairo_t *);
-extern int continuar;
-extern int ejecucionContinua;
-extern void *prueba();
-extern int argNumber;
-extern char **args;
-extern char **bitacora;
-extern int terminado;
-extern char ***tablaBitacora;
-extern int sizeBitacora;
+void *prueba(void *vargp);
+
+char *getname(int syscall);
+char *getDescription(int syscall);
+int continuar;
+int ejecucionContinua;
+int argNumber;
+char **args;
+char **bitacora;
+char ***tablaAcumulada;
+char ***tablaBitacora;
+int sizeBitacora = 0;
+int contadorTabla = 0;
+int rows = 102400;
+int cols = 4;
+int tableSize = 0;
+int cargarLinea = 0;
+int terminado = 0;
 
 GtkWidget *bitacoraScrolled;
 
@@ -66,8 +85,6 @@ GtkCellRenderer *frecuenciaText;
 GtkWidget *window;
 GtkBuilder *builder;
 
-extern char ***tablaAcumulada;
-
 int maxSizeBitacora = 1024;
 int maxSizeFrecuencia = 1024;
 
@@ -76,8 +93,6 @@ int currentSizeFrecuencia = 0;
 
 int widthChart = 600;
 int heightChart = 520;
-extern int rows;
-extern int tableSize;
 int currentRow = 1;
 
 int pausadaStarted;
@@ -122,8 +137,21 @@ void showDialog()
 //Muestra la tabla de acumulados
 void desplegarTablaAcumulada()
 {
-    gtk_list_store_clear(acumuladaStore);
     GtkTreeIter iter;
+    /*if(pos == tableSize-1){
+        //fprintf(stderr, "append");
+        gtk_list_store_append(acumuladaStore, &iter);
+    }else{
+        gtk_list_store_move_before(acumuladaStore, &iter, pos);
+    }
+    fprintf(stderr, "%d", pos);
+    const gint str1 = atoi(tablaAcumulada[pos][1]);
+    gtk_list_store_set(acumuladaStore, &iter, 1, str1, -1);
+    const gchararray str2 = tablaAcumulada[pos][0];
+    gtk_list_store_set(acumuladaStore, &iter, 0, str2, -1);*/
+
+    gtk_list_store_clear(acumuladaStore);
+
     for (int i = 0; i < tableSize; i++)
     {
         gtk_list_store_append(acumuladaStore, &iter);
@@ -143,7 +171,8 @@ void desplegarTablaAcumulada()
             }
         }
     }
-    gtk_widget_set_sensitive(chart_button, TRUE);
+
+    update();
 }
 
 void desplegarBitacoraPausada(char **array)
@@ -155,7 +184,6 @@ void desplegarBitacoraPausada(char **array)
                 return;
         ;
         cargarLinea = 0;
-        desplegarTablaAcumulada();
         GtkTreeIter iter;
 
         gtk_list_store_append(bitacoraStore, &iter);
@@ -173,25 +201,27 @@ void desplegarBitacoraPausada(char **array)
     }
 }
 
-void desplegarBitacoraContinua(char ***matrix)
+
+void addLineaBitacora()
 {
-    gtk_list_store_clear(bitacoraStore);
-    GtkTreeIter iter;
-    for (int i = 0; i < sizeBitacora; i++)
+    if (cargarLinea)
     {
-        if(i > 1000){
+        GtkTreeIter iter;
+        if (sizeBitacora > 1000)
+        {
             GtkTreeIter iter2;
             gtk_list_store_prepend(bitacoraStore, &iter2);
             gtk_list_store_remove(bitacoraStore, &iter2);
             gtk_list_store_remove(bitacoraStore, &iter2);
         }
         gtk_list_store_append(bitacoraStore, &iter);
-    
+
         for (int j = 0; j < cols; j++)
         {
-            const gchararray str = matrix[i][j];
+            const gchararray str = tablaBitacora[sizeBitacora - 1][j];
             gtk_list_store_set(bitacoraStore, &iter, j, str, -1);
         }
+        update();
     }
 }
 
@@ -236,9 +266,14 @@ void pausada_radio_toggled_cb(GtkToggleButton *pausada_radio)
 
 void next_button_clicked_cb(GtkButton *b)
 {
-
     continuar = 1;
     desplegarBitacoraPausada(bitacora);
+    desplegarTablaAcumulada();
+    if (terminado)
+    {
+        gtk_widget_set_sensitive(next_button, FALSE);
+        loadChart();
+    }
 }
 
 void rastrear_button_clicked_cb(GtkButton *rastrear_button)
@@ -251,6 +286,7 @@ void rastrear_button_clicked_cb(GtkButton *rastrear_button)
     {
         if (!ejecucionContinua)
         {
+
             gtk_widget_set_sensitive(next_button, TRUE);
             continuar = 1;
         }
@@ -274,27 +310,19 @@ void rastrear_button_clicked_cb(GtkButton *rastrear_button)
             strcpy(argumentos[j], token);
             argc++;
         }
+
         args = argumentos;
         argNumber = argc;
         pthread_t thread_id;
-        pthread_create(&thread_id, NULL, prueba, NULL);
-        if (ejecucionContinua)
+        
+        if (!ejecucionContinua)
         {
-            while (!terminado)
-            {
-                continuar = 0;
-                if (cargarLinea)
-                {
-                    desplegarBitacoraContinua(tablaBitacora);
-                    desplegarTablaAcumulada();
-                    continuar = 1;
-                }
-                if (terminado)
-                {
-                    break;
-                }
-            }
+            pthread_create(&thread_id, NULL, prueba, NULL);
+        }else{
+            prueba(NULL);
         }
+        continuar = 1;
+        loadChart();
     }
 }
 
@@ -522,6 +550,143 @@ void initializeMainWindow()
     consolaField = GTK_WIDGET(gtk_builder_get_object(builder, "consola_field"));
     chart_button = GTK_WIDGET(gtk_builder_get_object(builder, "chart_button"));
     gtk_widget_set_sensitive(chart_button, FALSE);
+}
+
+/*************************************************
+ * *******************TRACER**********************
+ *************************************************/
+
+int procesoHijo(int argc, char **argv)
+{
+    //pasar argumentos de la entrada
+    char *args[argc + 1];
+    memcpy(args, argv, argc * sizeof(char *));
+    args[argc] = NULL;
+    //indicar trace
+    ptrace(PTRACE_TRACEME);
+    kill(getpid(), SIGSTOP);
+    return execvp(args[0], args);
+}
+
+int esperarSyscall(pid_t hijo)
+{
+    int estado;
+    while (1)
+    {
+        if (continuar || ejecucionContinua)
+        {
+            ptrace(PTRACE_SYSCALL, hijo, 0, 0);
+            waitpid(hijo, &estado, 0);
+            if (WIFSTOPPED(estado) && WSTOPSIG(estado) & 0x80)
+                return 0;
+            if (WIFEXITED(estado))
+                return 1;
+        }
+    }
+}
+
+int tracear(pid_t hijo)
+{
+    int estado, syscall;
+    waitpid(hijo, &estado, 0);
+    ptrace(PTRACE_SETOPTIONS, hijo, 0, PTRACE_O_TRACESYSGOOD);
+    //fprintf(stderr, "%d\n%d\n", ejecucionContinua, continuar);
+    while (esperarSyscall(hijo) == 0)
+    {
+        syscall = ptrace(PTRACE_PEEKUSER, hijo, sizeof(long) * ORIG_RAX);
+        //fprintf(stderr, "%s\n descripción %s\n", getname(syscall), getDescription(syscall));
+        char id[255] = "";
+        char codigo[255] = "";
+        sprintf(id, "%i", contadorTabla);
+        sprintf(codigo, "%i", syscall);
+        strcpy(bitacora[0], id);
+        strcpy(bitacora[1], codigo);
+        strcpy(bitacora[2], getname(syscall));
+        strcpy(bitacora[3], getDescription(syscall));
+        for (int i = 0; i <= tableSize; i++)
+        {
+            if (i >= tableSize)
+            {
+                strcpy(tablaAcumulada[i][0], bitacora[2]);
+                strcpy(tablaAcumulada[i][1], "1");
+                tableSize++;
+                if(ejecucionContinua){
+                    desplegarTablaAcumulada();
+                }
+                break;
+            }
+            else if (strcmp(tablaAcumulada[i][0], bitacora[2]) == 0)
+            {
+                int numero = atoi(tablaAcumulada[i][1]);
+                numero++;
+                //char frecuencia[255] = "";
+                sprintf(tablaAcumulada[i][1], "%i", numero);
+                if(ejecucionContinua){
+                    desplegarTablaAcumulada();
+                }
+                break;
+            }
+        }
+        if (ejecucionContinua)
+        {
+            strcpy(tablaBitacora[sizeBitacora][0], id);
+            strcpy(tablaBitacora[sizeBitacora][1], codigo);
+            strcpy(tablaBitacora[sizeBitacora][2], getname(syscall));
+            strcpy(tablaBitacora[sizeBitacora][3], getDescription(syscall));
+            sizeBitacora++;
+            if(ejecucionContinua){
+                addLineaBitacora();
+            }
+        }
+        cargarLinea = 1;
+        contadorTabla++;
+        esperarSyscall(hijo);
+        continuar = 0;
+    }
+    terminado = 1;
+    for (int j = 0; j < argNumber; j++)
+    {
+        free(args[j]);
+    }
+    free(args);
+    return 0;
+}
+
+void *prueba(void *vargp)
+{
+    bitacora = (char **)malloc(4 * sizeof(char *));
+    for (int j = 0; j < 4; j++)
+    {
+        bitacora[j] = malloc(255 * sizeof(char));
+    }
+    tablaAcumulada = (char ***)malloc(rows * sizeof(char **));
+    for (int i = 0; i < rows; i++)
+    {
+        tablaAcumulada[i] = (char **)malloc(2 * sizeof(char *));
+        tablaAcumulada[i][0] = malloc(10 * sizeof(char));
+        tablaAcumulada[i][1] = malloc(7 * sizeof(char));
+    }
+    tablaBitacora = (char ***)malloc(rows * 10 * sizeof(char **));
+    for (int i = 0; i < rows * 10; i++)
+    {
+        tablaBitacora[i] = (char **)malloc(cols * sizeof(char *));
+        tablaBitacora[i][0] = malloc(7 * sizeof(char));
+        tablaBitacora[i][1] = malloc(4 * sizeof(char));
+        tablaBitacora[i][2] = malloc(10 * sizeof(char));
+        tablaBitacora[i][3] = malloc(180 * sizeof(char));
+    }
+    continuar = 0;
+    pid_t hijo = fork();
+    if (hijo == 0)
+    {
+        return procesoHijo(argNumber, args);
+    }
+    else
+    {
+        return tracear(hijo);
+    }
+
+    pthread_exit(NULL);
 }
 
 int main(int argc, char *argv[])
