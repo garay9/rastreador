@@ -28,7 +28,7 @@
     <property name="pixbuf">chartIcon.png</property>
   </object>
   <object class="GtkWindow" id="mainWindow">
-    <property name="width_request">1150</property>
+    <property name="width_request">1600</property>
     <property name="height_request">700</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Rastreador</property>
@@ -176,7 +176,7 @@
                 </child>
                 <child>
                   <object class="GtkScrolledWindow" id="acumuladaScrolled">
-                    <property name="width_request">450</property>
+                    <property name="width_request">250</property>
                     <property name="height_request">400</property>
                     <property name="visible">True</property>
                     <property name="app_paintable">True</property>
@@ -350,6 +350,31 @@
                   <packing>
                     <property name="x">100</property>
                     <property name="y">180</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkSeparator">
+                    <property name="width_request">2</property>
+                    <property name="height_request">500</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="orientation">vertical</property>
+                  </object>
+                  <packing>
+                    <property name="x">880</property>
+                    <property name="y">100</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkDrawingArea" id="chartArea">
+                    <property name="width_request">600</property>
+                    <property name="height_request">600</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                  </object>
+                  <packing>
+                    <property name="x">930</property>
+                    <property name="y">50</property>
                   </packing>
                 </child>
               </object>

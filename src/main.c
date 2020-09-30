@@ -23,6 +23,14 @@ GtkWidget *rastrear_button;
 GtkWidget *next_button;
 GtkWidget *consolaField;
 GtkWidget *chart_button;
+GtkWidget *dialogWindow;
+GtkButton *dialogButton;
+GtkContainer *dialogBox;
+GtkButtonBox *buttonBox;
+GtkLabel *dialogLabel;
+
+GtkFixed *contenedor;
+GtkWidget *chartArea;
 
 GtkViewport *bitacoraViewPort;
 GtkTreeView *bitacoraTreeView;
@@ -62,12 +70,53 @@ int currentSizeBitacora = 0;
 int currentSizeFrecuencia = 0;
 
 int widthChart = 600;
-int heightChart = 600;
+int heightChart = 520;
 extern int rows;
 extern int tableSize;
 int currentRow = 1;
 
 int pausadaStarted;
+
+
+
+int value = -1;
+
+
+
+float calcularSuma(){
+    int suma = 0;
+    for(int i = 0; i < tableSize; i++){
+    //     const gint str = atoi(tablaAcumulada[i][j]);
+        suma += atoi(tablaAcumulada[i][1]);
+
+    }
+    return suma;
+}
+
+
+void showDialog(){
+    GtkWidget *dialog;
+    GtkWidget *content_area;
+    GtkWidget *label;
+
+  gint response_id;
+
+  dialog = gtk_dialog_new_with_buttons ("oOoPS mi pana.", 
+                                        window, 
+                                        GTK_DIALOG_MODAL, 
+                                        "pum pum pum", 
+                                        GTK_RESPONSE_OK, 
+                                        NULL);
+
+  content_area = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+  label = gtk_label_new ("Por favor ingrese un programa usando la línea de comandos.");
+  gtk_container_add (GTK_CONTAINER (content_area), label);
+
+  gtk_widget_show_all (dialog);
+  
+
+  g_signal_connect (GTK_DIALOG (dialog), "response", G_CALLBACK (gtk_widget_destroy), NULL);
+}
 
 //Muestra la tabla de acumulados
 void desplegarTablaAcumulada()
@@ -135,6 +184,12 @@ void desplegarBitacoraContinua(char ***matrix)
 ******************GLADE EVENTS****************
 **********************************************/
 
+int isEmpty(){
+    int len = gtk_entry_get_text_length(consolaField);
+    if(len == 0) return 1;
+    else return 0;
+}
+
 void update()
 {
     while (gtk_events_pending())
@@ -145,7 +200,7 @@ void update()
 
 void chart_button_clicked_cb(GtkButton *b)
 {
-    loadChart();
+ loadChart();   
 }
 
 void continua_radio_toggled_cb(GtkToggleButton *continua_radio)
@@ -169,56 +224,67 @@ void next_button_clicked_cb(GtkButton *b)
 
 void rastrear_button_clicked_cb(GtkButton *rastrear_button)
 {
-
-    if (!ejecucionContinua)
-    {
-        gtk_widget_set_sensitive(next_button, TRUE);
-    }
-    else
-    {
-        gtk_widget_set_sensitive(next_button, FALSE);
-    }
-
-    char *comando = gtk_entry_get_text(consolaField);
-    int maxArgc = 20;
-    int argc = 0;
-    char **argumentos = (char **)malloc(maxArgc * sizeof(char *));
-    for (int j = 0; j < maxArgc; j++)
-    {
-        argumentos[j] = malloc(255 * sizeof(char));
-        char *token;
-
-        token = strtok_r(comando, " ", &comando);
-        if (token == NULL)
-            break;
-        strcpy(argumentos[j], token);
-        argc++;
-    }
-    args = argumentos;
-    argNumber = argc;
-    pthread_t thread_id;
-    pthread_create(&thread_id, NULL, prueba, NULL);
-    if (ejecucionContinua)
-    {
-        while (!terminado)
+    if(isEmpty()){
+            showDialog();
+    }else{
+        if (!ejecucionContinua)
         {
-            if (cargarLinea)
-            {
-                continuar = 0;
-                desplegarBitacoraPausada(bitacora);
-                continuar = 1;
-            }
-            if(terminado) break;
+            gtk_widget_set_sensitive(next_button, TRUE);
         }
+        else
+        {
+            gtk_widget_set_sensitive(next_button, FALSE);
+        }
+
+        char *comando = gtk_entry_get_text(consolaField);
+        int maxArgc = 20;
+        int argc = 0;
+        char **argumentos = (char **)malloc(maxArgc * sizeof(char *));
+        for (int j = 0; j < maxArgc; j++)
+        {
+            argumentos[j] = malloc(255 * sizeof(char));
+            char *token;
+
+            token = strtok_r(comando, " ", &comando);
+            if (token == NULL)
+                break;
+            strcpy(argumentos[j], token);
+            argc++;
+        }
+        args = argumentos;
+        argNumber = argc;
+        pthread_t thread_id;
+        pthread_create(&thread_id, NULL, prueba, NULL);
+        if (ejecucionContinua)
+        {
+            while (!terminado)
+            {
+                if (cargarLinea)
+                {
+                    continuar = 0;
+                    desplegarBitacoraPausada(bitacora);
+                    continuar = 1;
+                }
+                if(terminado) break;
+            }
+        }
+        desplegarTablaAcumulada();
+
     }
-    desplegarTablaAcumulada();
+    
 }
 
 void reset_button_clicked_cb(GtkButton *b)
 {
     gtk_list_store_clear(bitacoraStore);
     gtk_list_store_clear(acumuladaStore);
+    gtk_entry_set_text (consolaField, "");
     //data = NULL;
+}
+
+
+void dialogButton_clicked_cb(GtkButton *b){
+    gtk_window_close(dialogWindow);
 }
 
 /******************************************************************
@@ -234,28 +300,71 @@ struct
     double coordy[100];
 } glob;
 
+
+
 static void do_drawing(cairo_t *cr, GtkWidget *widget)
 {
 
     GtkWidget *win = gtk_widget_get_toplevel(widget);
-    float toAngle = M_PI * 3 / 2;
+    float toAngle = M_PI * 5 / 3;
     float fromAngle = toAngle;
 
     srand(time(NULL));
     cairo_set_line_width(cr, 9);
+    float Suma = calcularSuma();
+    if(Suma == 0) return;
 
+    float blue = 15;
     for (int i = 0; i < rows; i++)
     {
         float p = atoi(tablaAcumulada[i][1]);
-        p /= 4950;
-
+    
+        p /= Suma;
+       
+        
         toAngle += 2 * M_PI * p;
-        cairo_set_source_rgb(cr, rand() % 256 / 100, rand() % 256 / 100, rand() % 256 / 100);
+        cairo_set_source_rgb(cr, 17.0/255.0, 136.0/255.0, blue/255.0);
         cairo_arc(cr, widthChart / 2, widthChart / 2, widthChart * 0.45, fromAngle, toAngle);
         cairo_line_to(cr, widthChart / 2, heightChart / 2);
         cairo_fill(cr);
         fromAngle = toAngle;
+        blue -= 30;
+        if(blue <= 0){
+            blue = 255;
+        }
+        
+        
+
     }
+
+    toAngle = M_PI * 5 / 3;
+    fromAngle = toAngle;
+    for (int i = 0; i < rows; i++)
+    {
+        float p = atoi(tablaAcumulada[i][1]);
+        p /= Suma;
+        
+        if(p > 0.01){
+            toAngle += 2 * M_PI * p;
+            float angle = (fromAngle + toAngle) / 2;
+            float labelX =  widthChart / 2 * (0.9 + 0.2 * cos(angle));
+            float labelY =  widthChart / 2 * (1 + 0.7 * sin(angle));    
+            
+            cairo_set_source_rgb(cr, 1, 1, 1);
+            cairo_move_to(cr, labelX, labelY);
+            char labelPercent[128];    
+            float percent = p * 100;
+            printf("%f\n", percent);
+            snprintf(labelPercent, sizeof(labelPercent), "%.2f", percent);
+            strcat(labelPercent, "%  ");
+            strcat(labelPercent, tablaAcumulada[i][0]);
+            cairo_show_text(cr,labelPercent);
+            cairo_fill(cr);
+            fromAngle = toAngle;
+        }
+    }
+
+
 }
 
 static gboolean clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
@@ -275,7 +384,8 @@ static gboolean clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_
 }
 
 static gboolean on_draw_event(GtkWidget *widget, cairo_t *cr, gpointer user_data)
-{
+{   
+
     do_drawing(cr, widget);
 
     return FALSE;
@@ -283,27 +393,30 @@ static gboolean on_draw_event(GtkWidget *widget, cairo_t *cr, gpointer user_data
 
 void loadChart()
 {
-    GtkWidget *chartArea;
     GtkWidget *statisticsWindow;
+    
 
     statisticsWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    chartArea = gtk_drawing_area_new();
-    gtk_container_add(GTK_CONTAINER(statisticsWindow), chartArea);
 
-    g_signal_connect(G_OBJECT(chartArea), "draw", G_CALLBACK(on_draw_event), NULL);
-    g_signal_connect(G_OBJECT(statisticsWindow), "destroy", G_CALLBACK(gtk_main_quit), NULL);
-
-    gtk_window_set_position(GTK_WINDOW(statisticsWindow), GTK_WIN_POS_CENTER);
+    GtkWidget *drawing_area = gtk_drawing_area_new ();
     gtk_window_set_default_size(GTK_WINDOW(statisticsWindow), 600, 600);
+    gtk_container_add(GTK_CONTAINER(statisticsWindow), drawing_area);
+
+   g_signal_connect(G_OBJECT(drawing_area), "draw", G_CALLBACK(on_draw_event), NULL);
+   g_signal_connect(G_OBJECT(statisticsWindow), "destroy", G_CALLBACK(gtk_main_quit), NULL);
+    
     gtk_window_set_title(GTK_WINDOW(statisticsWindow), "Estadísticas");
     gtk_widget_show_all(statisticsWindow);
+    
 
-    gtk_main();
+     gtk_main();
 }
 
 /*************************************************
  * ****************INICIALIZAR COSITAS************
  *************************************************/
+
+
 void initializeTreeAcumulada()
 {
 
@@ -362,6 +475,8 @@ void initializeMainWindow()
     gdk_color_parse("#ffffff", &color);
     gtk_widget_modify_bg(GTK_WIDGET(bitacoraScrolled), GTK_STATE_NORMAL, &color);
 
+    contenedor = GTK_FIXED(gtk_builder_get_object(builder, "contenedor"));
+
     bitacoraTreeView = GTK_TREE_VIEW(gtk_builder_get_object(builder, "bitacoraTreeView"));
     bitacoraStore = GTK_LIST_STORE(gtk_builder_get_object(builder, "bitacoraStore"));
 
@@ -396,6 +511,9 @@ int main(int argc, char *argv[])
     initializeTreeAcumulada();
     selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(bitacoraTreeView));
 
+    chartArea = GTK_WIDGET(gtk_builder_get_object(builder, "chartArea"));
+
+g_object_unref(builder);
     gtk_widget_show(window);
     gtk_main();
 
