@@ -22,11 +22,6 @@
       <column type="gchararray"/>
     </columns>
   </object>
-  <object class="GtkImage" id="image1">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="pixbuf">chartIcon.png</property>
-  </object>
   <object class="GtkWindow" id="mainWindow">
     <property name="width_request">1600</property>
     <property name="height_request">700</property>
@@ -261,13 +256,13 @@
                 </child>
                 <child>
                   <object class="GtkButton" id="chart_button">
+                    <property name="label" translatable="yes">Salir</property>
                     <property name="width_request">100</property>
                     <property name="height_request">50</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                    <property name="image">image1</property>
-                    <signal name="clicked" handler="chart_button_clicked_cb" swapped="no"/>
+                    <signal name="clicked" handler="exit_button_clicked_cb" swapped="no"/>
                   </object>
                   <packing>
                     <property name="x">430</property>
